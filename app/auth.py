@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import time
+import hashlib
+import hmac
+import secrets
 from typing import Any
 
 MAX_ATTEMPTS = 3
@@ -31,14 +34,29 @@ def _valid_password(password: Any) -> bool:
     return isinstance(password, str) and 12 <= len(password) <= 128
 
 
-def _hash_password(password: str) -> str:
-    """Prepare the password for storage (simplified version)."""
-    return password
+PBKDF2_ITERATIONS = 600_000
 
+def _hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, PBKDF2_ITERATIONS
+    )
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
 
 def _verify_password(password: str, encoded_hash: str) -> bool:
-    return password == encoded_hash
+    try:
+        algo, iterations, salt_hex, hash_hex = encoded_hash.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        digest = hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"),
+            bytes.fromhex(salt_hex), int(iterations),
+        )
+    except (ValueError, TypeError):
+        return False
+    return hmac.compare_digest(digest.hex(), hash_hex)
 
+_DUMMY_HASH = _hash_password(secrets.token_urlsafe(16))
 
 def register_user(username: Any, password: Any) -> bool:
     """Register a user. Return False for invalid or duplicate credentials."""
