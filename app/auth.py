@@ -86,6 +86,7 @@ def authenticate(username: Any, password: Any) -> dict[str, Any]:
     encoded_hash = users.get(username)
 
     if encoded_hash is None:
+        _verify_password(password, _DUMMY_HASH)
         return {"success": False, "message": "Utilisateur inconnu"}
 
     if not _verify_password(password, encoded_hash):
