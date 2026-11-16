@@ -43,6 +43,8 @@ def _hash_password(password: str) -> str:
     )
     return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
 
+_DUMMY_HASH = _hash_password(secrets.token_urlsafe(16))
+
 def _verify_password(password: str, encoded_hash: str) -> bool:
     try:
         algo, iterations, salt_hex, hash_hex = encoded_hash.split("$")
@@ -56,7 +58,7 @@ def _verify_password(password: str, encoded_hash: str) -> bool:
         return False
     return hmac.compare_digest(digest.hex(), hash_hex)
 
-_DUMMY_HASH = _hash_password(secrets.token_urlsafe(16))
+
 
 def register_user(username: Any, password: Any) -> bool:
     """Register a user. Return False for invalid or duplicate credentials."""
@@ -97,7 +99,7 @@ def authenticate(username: Any, password: Any) -> dict[str, Any]:
 
 def _record_failure(username: str, now: float) -> None:
     attempts[username] = attempts.get(username, 0) + 1
-    if attempts[username] > MAX_ATTEMPTS:
+    if attempts[username] >= MAX_ATTEMPTS:
         blocked_until[username] = now + LOCKOUT_SECONDS
 
 
